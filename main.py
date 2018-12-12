@@ -6,7 +6,6 @@ import sys
 
 from mailautolabel.imap import IMAP_Main
 from mailautolabel.labelizer import MAIL_Labelizer
-#from mailautolabel.utils import CSV_Helper
 
 ################################################################################
 # logger configuration
@@ -41,16 +40,16 @@ imap = IMAP_Main(
 # get messages
 messages = imap.get_messages(
 	header_keys = ['from', 'subject', 'date', 'from', 'to'],
-	folders = None, #['Trail'], # 'Univ', 'Meditation'],
+	#folders = ['Inbox'], # 'Univ', 'Meditation'],
 	search = 'unseen'
 )
 
 #print(messages[0].keys())
-[print(message['uid']) for message in messages]
+#[print(message['uid']) for message in messages]
+import pandas, os
+path_to_save = os.path.abspath('data/{}.csv'.format(username))
+pandas.DataFrame(messages).to_csv(path_to_save)
 
-# get the csv class and save messages
-#csv = CSV_Helper(username=username)
-#csv.save_messages(messages)
 """
 # get the labelizer class and predict folders
 labelizer = MAIL_Labelizer(

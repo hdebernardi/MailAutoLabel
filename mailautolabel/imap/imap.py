@@ -4,8 +4,10 @@
 ############################################################
 #from .string_helper import detect_encoding, get_rid_of_html
 #import mailparser
+import base64
+import flanker.mime
 import chardet
-from email.parser import HeaderParser
+from email.parser import HeaderParser, BytesParser
 import email
 import re
 import bs4
@@ -131,10 +133,13 @@ class IMAP_Main():
 		folders = kwargs.get('folders', None)
 		if not folders:
 			folders = self._get_parsed_folders()
+		else:
+			del kwargs['folders']
 		self.header_keys = kwargs.get('header_keys', None)
 
-		del kwargs['header_keys']
-		del kwargs['folders']
+		if self.header_keys is not None:
+			del kwargs['header_keys']
+
 		# construct the query
 		self.query = IMAP_Query(kwargs=kwargs)
 
@@ -157,6 +162,97 @@ class IMAP_Main():
 
 
 	############################################################
+	def _parse_flags(self, flags):
+		"""Parse the given flags.
+
+		Args:
+			flags (bytes): The flags given as bytes.
+
+		Returns:
+			list: The flags parsed as a list of bytes.
+		"""
+		return [imaplib.ParseFlags(flag) for flag in flags if len(flags) != 0]
+
+	def _parse_header(self, header, encoding='utf-8'):
+		"""Parse the given header.
+
+		Args:
+			header ()
+		Returns:
+			Message :
+		"""
+		return HeaderParser().parsestr(header.decode(encoding))
+
+	def _decode_content(self, message):
+		content = message.get_payload(decode=True)
+		charset = message.get_content_charset('utf-8')
+		try:
+			return content.decode(charset, 'ignore')
+		except LookupError:
+			return content.decode(charset.replace('-', ''), 'ignore')
+		except AttributeError:
+			return content
+
+	"""
+	def get_content(self, raw):
+		data = base64.urlsafe_b64decode(raw)
+		email_parser = EmailParser(policy=policy.default)
+		email = email_parser.parsebytes(data)
+		plain = email.get_body(preferencelist=('plain',))
+		body = None
+		if plain:
+			body = plain.get_payload()
+		email_dict = dict(email)
+		email_dict['body'] = body
+		return email_dict
+	"""
+
+	def _parse_mail(self, mail):
+		"""Parse the given mail.
+
+		Args:
+			mail (bytes):
+
+		Returns:
+
+		"""
+		return flanker.mime.from_string(mail[0][1])
+
+	def _parse_folder(self, folder):
+		"""Parse the given folder.
+		"""
+		list_response_pattern = re.compile(
+			r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<name>.*)')
+
+		match = list_response_pattern.match(folder.decode('utf-8'))
+		flags, delimiter, mailbox_name = match.groups()
+		mailbox_name = mailbox_name.strip('"')
+		return (flags, delimiter, mailbox_name)
+
+
+	def get_rid_of_html(self, str_as_html):
+		"""TODO
+		"""
+		soup = bs4.BeautifulSoup(str_as_html, 'lxml')
+
+		# remove script and style elements
+		[script.extract() for script in soup(['script', 'style'])]
+
+		text = soup.get_text()
+
+		"""
+		# Divise en lignes et enlève les espaces à gauche et à droite sur chacune d'elles
+		lines = (line.strip() for line in text.splitlines())
+
+		# break multi-headlines into a line each
+		chunks = (phrase.strip() for line in lines for phrase in line.split(' '))
+
+		# add space between lines
+		text = ' '.join(chunk for chunk in chunks if chunk)
+		"""
+
+		return text
+
 	def _get_uids(self, folder):
 		"""Get all the messages' identifiants from a folder.
 
@@ -182,35 +278,49 @@ class IMAP_Main():
 		"""Parse the folders' strings to extract name.
 		"""
 		status, raw_folders = self.get_folders()
-		return [self.parser._parse_folder(folder)[2] for folder in raw_folders]
+		return [self._parse_folder(folder)[2] for folder in raw_folders]
 
 	def _fetch_email_by_uid(self, uid, folder):
 		logger.info('Fetch message with UID {}'.format(uid))
 
+		"""
 		if self.header_keys:
 			request = '(BODY.PEEK[HEADER.FIELDS ({})] BODY.PEEK[TEXT])'.format(' '.join(self.header_keys))
 		else:
 			request = '(BODY.PEEK[HEADER] BODY.PEEK[TEXT])'
 
-		status, raw_mail = self.connection.fetch(uid, request)
+		request = '(RFC822)'
+		"""
+
+		status, raw_mail = self.connection.fetch(uid, '(RFC822)')
 		#logger.debug('Header contains : {}'.format(header))
 		status, raw_flags = self.connection.fetch(uid, '(FLAGS)')
 		#logger.debug('Flags contains : {}'.format(flags))
 
-		header = self.parser._parse_header(raw_mail)
-		text = self.parser._parse_text(raw_mail)
-		flags = self.parser._parse_flags(raw_flags)
+		#raw_header = raw_mail[0][1]
+		raw_mail = raw_mail
+		raw_flags = raw_flags
 
-		email_dict = {}
-		for key, value in header.items():
-			email_dict[key] = value
+		#header = self._parse_header(raw_header)
+		mail = self._parse_mail(raw_mail)
+		flags = self._parse_flags(raw_flags)
 
-		email_dict['folder'] = folder
-		email_dict['uid'] = uid
-		email_dict['body'] = text
-		email_dict['flags'] = flags
+		mail_dict = {}
+		mail_dict['flags'] = flags
+		mail_dict['folder'] = folder
+		for key in self.header_keys:
+			mail_dict[key] = mail.headers[key]
 
-		return email_dict
+		if mail.body is not None:
+			mail_dict['body'] = self.get_rid_of_html(mail.body)
+		else:
+			for part in mail.parts:
+				if part == 'text/plain':
+					mail_dict['body'] = self.get_rid_of_html(part.body)
+				elif part == 'text/html':
+					mail_dict['body'] = self.get_rid_of_html(part.body)
+
+		return mail_dict
 
 	def _get_messages_from_folder(self, folder):
 		logger.info('Getting messages from {}'.format(folder))

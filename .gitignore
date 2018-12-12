@@ -1,0 +1,17 @@
+# Git
+git/
+
+# Byte-compiled
+__pycache__/
+
+# Virtualenv
+env/
+
+# IPython Notebook
+ipynb_checkpoints/
+
+# Vscode
+.vscode/
+
+#tout les __init__.py car cela ne fonctionne pas pour l'instant
+*/__init__.py

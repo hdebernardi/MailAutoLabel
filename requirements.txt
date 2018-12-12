@@ -1,0 +1,6 @@
+chardet
+bs4
+sklearn
+numpy
+pandas
+sphinx

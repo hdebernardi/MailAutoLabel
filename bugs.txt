@@ -1,0 +1,2 @@
+# affiner message d'erreur
+messages = imap.get_messages(folders=['erreur'])

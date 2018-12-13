@@ -19,3 +19,4 @@ Then, just navigate at the root of this project and run :
   - make
 
 https://pymotw.com/3/imaplib/
+https://github.com/mailgun/flanker

@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Module.
+"""
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-import sys
 import pandas
 import numpy
 
-class MAIL_Labelizer():
+class MAILLabelizer:
+	"""Class in charge of mail labelization.
+	"""
 	def __init__(self, username, messages):
 		self.username = username
 		self.messages = messages

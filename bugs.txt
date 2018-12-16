@@ -1,4 +1,0 @@
-# affiner message d'erreur
-messages = imap.get_messages(folders=['erreur'])
-
-# save csv create data folder if he doesn't exists

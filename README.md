@@ -1,4 +1,4 @@
-# MailExtractor
+# MailAutoLabel
 
 ## Quick start
 

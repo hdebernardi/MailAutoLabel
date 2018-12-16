@@ -1,1 +1,0 @@
-from .labelizer import MAIL_Labelizer

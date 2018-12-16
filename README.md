@@ -18,5 +18,5 @@ Then, just navigate at the root of this project and run :
   - source env/bin/activate
   - make
 
-https://pymotw.com/3/imaplib/
-https://github.com/mailgun/flanker
+- https://pymotw.com/3/imaplib/
+- https://github.com/mailgun/flanker
